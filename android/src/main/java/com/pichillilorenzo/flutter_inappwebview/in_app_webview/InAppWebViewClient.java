@@ -738,6 +738,7 @@ public class InAppWebViewClient extends WebViewClient {
             okhttp3.Request request1 = new okhttp3.Request.Builder()
                     .url(url)
                     .headers(okhttp3.Headers.of(responseHeaders))
+                    .get()
                     .build();
 
             okhttp3.Response response = httpClient.newCall(request1).execute();
@@ -745,11 +746,17 @@ public class InAppWebViewClient extends WebViewClient {
             Map<String, String> okHttpHeaders = new HashMap<>();
 
             for (Map.Entry<String, List<String>> entry : response.headers().toMultimap().entrySet()) {
-              okHttpHeaders.put(entry.getKey().toString(), entry.getValue().toString().replace("[", "").replace("]", ""));
+              if(!entry.getKey().toString().equals("content-type")){
+                System.out.println(entry.getKey().toString());
+                okHttpHeaders.put(entry.getKey().toString(), entry.getValue().toString().replace("[", "").replace("]", ""));
+              }else{
+                System.out.println("Client via");
+              }
+
             }
 
-            //System.out.println("Okhttp::" + url + " " + okHttpHeaders.toString());
-
+            System.out.println("Okhttp::" + url + " " + okHttpHeaders.toString());
+            //okHttpHeaders.remove("content-type");
             //return new WebResourceResponse(response.body().contentType().toString().split(";")[0], "UTF-8", response.body().byteStream());
 
             return new WebResourceResponse(response.body().contentType().toString().split(";")[0], "UTF-8", response.code(), "Ok", okHttpHeaders, response.body().byteStream());
