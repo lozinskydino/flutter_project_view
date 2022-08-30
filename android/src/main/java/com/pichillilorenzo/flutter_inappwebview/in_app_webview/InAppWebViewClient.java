@@ -737,29 +737,30 @@ public class InAppWebViewClient extends WebViewClient {
 
             okhttp3.Request request1 = new okhttp3.Request.Builder()
                     .url(url)
-                    .headers(okhttp3.Headers.of(responseHeaders))
-                    .get()
+                    .headers(okhttp3.Headers.of(headers))
                     .build();
 
             okhttp3.Response response = httpClient.newCall(request1).execute();
 
-            Map<String, String> okHttpHeaders = new HashMap<>();
+            Map<String, String> okHttpHeaders = new HashMap<String, String>();
 
             for (Map.Entry<String, List<String>> entry : response.headers().toMultimap().entrySet()) {
-              if(!entry.getKey().toString().equals("content-type")){
-                System.out.println(entry.getKey().toString());
+              //if(!entry.getKey().toString().equals("content-type")){
                 okHttpHeaders.put(entry.getKey().toString(), entry.getValue().toString().replace("[", "").replace("]", ""));
-              }else{
-                System.out.println("Client via");
-              }
+              //}else{
+                //System.out.println("Client via");
+              //}
 
             }
+            String contentType1 = okHttpHeaders.get("content-type").toString();
+            okHttpHeaders.remove("content-encoding");
+            okHttpHeaders.remove("content-type");
 
-            System.out.println("Okhttp::" + url + " " + okHttpHeaders.toString());
+            System.out.println("Okhttp::" + url + " " + headers);
             //okHttpHeaders.remove("content-type");
-            //return new WebResourceResponse(response.body().contentType().toString().split(";")[0], "UTF-8", response.body().byteStream());
-
-            return new WebResourceResponse(response.body().contentType().toString().split(";")[0], "UTF-8", response.code(), "Ok", okHttpHeaders, response.body().byteStream());
+            //return new WebResourceResponse(response.body().contentType().toString(), "UTF-8", response.body().byteStream());
+            //return new WebResourceResponse("", "UTF-8", response.body().byteStream());
+            return new WebResourceResponse("", "UTF-8", response.code(), "Ok", okHttpHeaders, response.body().byteStream());
           }
 
         } catch (Exception e) {
