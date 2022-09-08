@@ -49,8 +49,6 @@ import java.util.regex.Matcher;
 
 import io.flutter.plugin.common.MethodChannel;
 
-import okhttp3.Dns;
-import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 
 public class InAppWebViewClient extends WebViewClient {
@@ -735,16 +733,7 @@ public class InAppWebViewClient extends WebViewClient {
 
         try {
           if(reasonPhrase != null && reasonPhrase.equals("intercept")) {
-            //OkHttpClient httpClient = new OkHttpClient();
-            OkHttpClient bootstrapClient = new OkHttpClient();
-
-            Dns google = new DnsOverHttps.Builder().client(bootstrapClient)
-                    .url(HttpUrl.get("https://1.1.1.1/dns-query"))
-                    .bootstrapDnsHosts(getByIp("1.1.1.1"), getByIp("1.0.0.1"))
-                    .build();
-
-            OkHttpClient httpClient = new OkHttpClient.Builder().dns(google).build();
-
+            OkHttpClient httpClient = new OkHttpClient();
 
             okhttp3.Request request1 = new okhttp3.Request.Builder()
                     .url(url)
