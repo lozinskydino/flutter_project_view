@@ -38,17 +38,29 @@ import com.pichillilorenzo.flutter_inappwebview.types.URLCredential;
 import com.pichillilorenzo.flutter_inappwebview.types.URLProtectionSpace;
 import com.pichillilorenzo.flutter_inappwebview.types.URLRequest;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 
 import io.flutter.plugin.common.MethodChannel;
 
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 
 public class InAppWebViewClient extends WebViewClient {
@@ -722,6 +734,7 @@ public class InAppWebViewClient extends WebViewClient {
       Log.e(LOG_TAG, flutterResult.error);
     }
     else if (flutterResult.result != null) {
+
       Map<String, Object> res = (Map<String, Object>) flutterResult.result;
       String contentType = (String) res.get("contentType");
       String contentEncoding = (String) res.get("contentEncoding");
@@ -731,45 +744,50 @@ public class InAppWebViewClient extends WebViewClient {
       String reasonPhrase = (String) res.get("reasonPhrase");
 
 
-        try {
-          if(reasonPhrase != null && reasonPhrase.equals("intercept")) {
-            OkHttpClient httpClient = new OkHttpClient();
+      try {
 
-            okhttp3.Request request1 = new okhttp3.Request.Builder()
-                    .url(url)
-                    .headers(okhttp3.Headers.of(headers))
-                    .build();
+        //if (reasonPhrase != null && reasonPhrase.equals("intercept")) {
+        if (true) {
 
-            okhttp3.Response response = httpClient.newCall(request1).execute();
+          URL _url = new URL(url);
+          HttpURLConnection urlConnection = (HttpURLConnection) _url.openConnection();
 
-            Map<String, String> okHttpHeaders = new HashMap<String, String>();
+          //urlConnection.setRequestProperty ("X-Requested-With", null);
+          //urlConnection.setRequestProperty ("User-Agent", "MeuPatrak 7.0");
 
-            for (Map.Entry<String, List<String>> entry : response.headers().toMultimap().entrySet()) {
-              //if(!entry.getKey().toString().equals("content-type")){
-                okHttpHeaders.put(entry.getKey().toString(), entry.getValue().toString().replace("[", "").replace("]", ""));
-              //}else{
-                //System.out.println("Client via");
-              //}
-
-            }
-            String contentType1 = okHttpHeaders.get("content-type").toString();
-            okHttpHeaders.remove("content-encoding");
-            okHttpHeaders.remove("content-type");
-
-            System.out.println("Okhttp::" + url + " " + headers);
-            //okHttpHeaders.remove("content-type");
-            //return new WebResourceResponse(response.body().contentType().toString(), "UTF-8", response.body().byteStream());
-            //return new WebResourceResponse("", "UTF-8", response.body().byteStream());
-            return new WebResourceResponse("", "UTF-8", response.code(), "Ok", okHttpHeaders, response.body().byteStream());
+          for (Map.Entry<String, String> entry : headers.entrySet()) {
+            urlConnection.setRequestProperty(entry.getKey(), entry.getValue());
+            //System.out.println(entry.getKey() + ":" + entry.getValue());
           }
 
-        } catch (Exception e) {
-          System.out.println("error::" + e.getMessage());
-          return null;
+          //System.out.println("httpConnection::" + headers.toString());
+
+          /*if (urlConnection.getResponseCode() != 200) {
+            System.out.println("httpConnection::HTTPStatusError[" + urlConnection.getResponseCode() + "][" + url + "]");
+          }*/
+
+          Map<String, String> okHttpHeaders = new HashMap<String, String>();
+
+          for (Map.Entry<String, List<String>> entry : urlConnection.getHeaderFields().entrySet()) {
+              okHttpHeaders.put(entry.getKey(), entry.getValue().toString().replace("[", "").replace("]", ""));
+          }
+
+          return new WebResourceResponse(
+            contentType,
+            contentEncoding,
+            urlConnection.getResponseCode(),
+            reasonPhrase,
+            okHttpHeaders,
+            urlConnection.getInputStream()
+          );
+
         }
 
-
-
+      } catch (Exception e) {
+          e.printStackTrace();
+          System.out.println("error::" + e.getMessage());
+          return null;
+      }
 
       ByteArrayInputStream inputStream = (data != null) ? new ByteArrayInputStream(data) : null;
 
