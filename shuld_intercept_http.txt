@@ -46,11 +46,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.io.File;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -60,7 +58,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.zip.GZIPInputStream;
@@ -68,15 +65,10 @@ import java.util.zip.ZipException;
 
 import io.flutter.plugin.common.MethodChannel;
 
-import okhttp3.Dns;
-import okhttp3.Headers;
-import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import okhttp3.Cache;
-import okhttp3.dnsoverhttps.DnsOverHttps;
 
 public class InAppWebViewClient extends WebViewClient {
 
@@ -741,7 +733,6 @@ public class InAppWebViewClient extends WebViewClient {
     obj.put("isRedirect", isRedirect);
 
     Util.WaitFlutterResult flutterResult;
-
     try {
       flutterResult = Util.invokeMethodAndWait(channel, "shouldInterceptRequest", obj);
     } catch (InterruptedException e) {
@@ -751,7 +742,8 @@ public class InAppWebViewClient extends WebViewClient {
 
     if (flutterResult.error != null) {
       Log.e(LOG_TAG, flutterResult.error);
-    } else if (flutterResult.result != null) {
+    }
+    else if (flutterResult.result != null) {
 
       Map<String, Object> res = (Map<String, Object>) flutterResult.result;
       String contentType = (String) res.get("contentType");
@@ -761,171 +753,156 @@ public class InAppWebViewClient extends WebViewClient {
       Integer statusCode = (Integer) res.get("statusCode");
       String reasonPhrase = (String) res.get("reasonPhrase");
 
-      Response response = null;
 
-      //if (method.equals("GET") && (!url.contains(".php") && !url.contains(".m3u8") && !url.contains(".ts"))) {
-      if (method.equals("GET") && url.contains("futemax")) {
-        return makeRequest(url, headers, null);
+      try {
+
+        //if (reasonPhrase != null && reasonPhrase.equals("intercept")) {
+        if (true) {
+
+          URL _url = new URL(url);
+
+          HttpURLConnection urlConnection = (HttpURLConnection) _url.openConnection();
+          urlConnection.setRequestMethod(method);
+
+
+          /*Map<String, List<String>> headerFields = urlConnection.getHeaderFields();
+          List<String> cookiesHeader = headerFields.get(COOKIES_HEADER);
+
+          if (cookiesHeader != null) {
+            for (String cookie : cookiesHeader) {
+              msCookieManager.getCookieStore().add(null, HttpCookie.parse(cookie).get(0));
+            }
+          }*/
+          //urlConnection.setRequestMethod("POST");
+
+          if (headers != null) {
+            System.out.println("httpConnection::headers=" + headers);
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+              urlConnection.setRequestProperty(entry.getKey(), entry.getValue());
+              //System.out.println(entry.getKey() + ":" + entry.getValue());
+            }
+          }
+
+          //urlConnection.setRequestProperty ("X-Requested-With", null);
+          //urlConnection.setRequestProperty ("User-Agent", "MeuPatrak 7.0");
+
+          urlConnection.setRequestProperty ("Chache-Control", "no-cache");
+          urlConnection.setRequestProperty ("Pragma", "no-cache");
+
+          urlConnection.setRequestProperty ("Accept-Encoding", "gzip");
+          urlConnection.setRequestProperty ("Accept-Language", "pt-BR,pt;q=0.9,es-PA;q=0.8,es;q=0.7,en-US;q=0.6,en;q=0.5");
+
+          urlConnection.setRequestProperty ("sec-fetch-dest", "document");
+          urlConnection.setRequestProperty ("sec-fetch-site", "none");
+          urlConnection.setRequestProperty ("sec-ch-ua-mobile", "?1");
+          urlConnection.setRequestProperty ("sec-ch-ua-platform", "Android");
+          urlConnection.setRequestProperty ("sec-fetch-mode", "navigate");
+
+          //sec-ch-ua-mobile: ?1
+          //sec-ch-ua-platform: "Android"
+          //sec-fetch-dest: style
+          //sec-fetch-mode: no-cors
+          //sec-fetch-site: same-site
+
+          // Verifica contentType
+          String contentTypeResponse = null;
+          //String contentTypeConnection = urlConnection.getContentType().split(";")[0];
+
+          /*if (urlConnection.getContentType() != null) {
+            //contentTypeResponse = urlConnection.getContentType().split(";")[0];
+            //contentTypeResponse = urlConnection.getContentType();
+          }*/
+
+          try {
+            contentTypeResponse = urlConnection.getContentType().split(";")[0];
+          } catch(Exception e) {
+            e.printStackTrace();
+          }
+
+          System.out.println("httpConnection1::_url=" + url);
+          System.out.println("httpConnection1::_reasonPhrase=" + reasonPhrase);
+          System.out.println("httpConnection1::_contentType=" + contentType);
+          System.out.println("httpConnection1::_contentEncoding=" + contentEncoding);
+
+          System.out.println("httpConnection::url=" + url);
+          System.out.println("httpConnection::reasonPhrase=" + urlConnection.getResponseMessage());
+          System.out.println("httpConnection::contentType=" + contentTypeResponse);
+          //System.out.println("httpConnection::contentEncoding=" + urlConnection.getContentEncoding());
+
+          if (urlConnection.getResponseCode() != 200) {
+            System.out.println("httpConnection::HTTPStatusError[" + urlConnection.getResponseCode() + "][" + url + "]");
+          }
+
+          Map<String, String> okHttpHeaders = new HashMap<String, String>();
+
+          for (Map.Entry<String, List<String>> entry : urlConnection.getHeaderFields().entrySet()) {
+              okHttpHeaders.put(entry.getKey(), entry.getValue().toString().replace("[", "").replace("]", ""));
+          }
+
+          InputStream inStream = null;
+
+          try {
+            inStream = new GZIPInputStream(urlConnection.getInputStream());
+          } catch (Exception e) {
+            inStream = urlConnection.getInputStream();
+          }
+
+          String contentEncodingTr = "utf-8";
+
+          try {
+            contentEncodingTr = urlConnection.getContentEncoding();
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+
+          return new WebResourceResponse(
+              contentTypeResponse,
+              contentEncodingTr,
+              urlConnection.getResponseCode(),
+              urlConnection.getResponseMessage() != null ? urlConnection.getResponseMessage() : null,
+              okHttpHeaders,
+              inStream
+          );
+
+          /*final OkHttpClient httpClient = new OkHttpClient();
+          Response response = null;
+          try {
+            final Request request1 = new Request.Builder()
+                    .url(url.trim())
+                    .addHeader("test-header", "test-value")
+                    .build();
+            response = httpClient.newCall(request1).execute();
+          }
+          catch (Exception e) {
+          }
+          if (response == null) {
+            return null;
+          }
+          return new WebResourceResponse(
+            getMimeType(url),
+            response.header("content-encoding", "utf-8"),
+            response.body().byteStream()
+          );*/
+
+        }
+
+      } catch (Exception e) {
+          e.printStackTrace();
+          System.out.println("httpConnection::error::" + e.getMessage());
+          return null;
       }
 
+      ByteArrayInputStream inputStream = (data != null) ? new ByteArrayInputStream(data) : null;
+
+      if ((responseHeaders == null && statusCode == null && reasonPhrase == null) || Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+        return new WebResourceResponse(contentType, contentEncoding, inputStream);
+      } else {
+        return new WebResourceResponse(contentType, contentEncoding, statusCode, reasonPhrase, responseHeaders, inputStream);
+      }
     }
 
     return null;
-
   }
-
-  @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-  private WebResourceResponse makeRequest(String url, Map<String, String> headers, String reffer) {
-
-    Response response = null;
-
-    try {
-
-      Cache appCache = new Cache(new File("cacheDir", "okhttpcache"), 10 * 1024 * 1024);
-      OkHttpClient bootstrapClient = new OkHttpClient.Builder().cache(appCache).build();
-
-      //DnsOverHttps customDns = new DnsOverHttps.Builder().client(bootstrapClient)
-      //    .url(HttpUrl.get("https://dns.google/dns-query"))
-      //    .bootstrapDnsHosts(InetAddress.getByName("8.8.4.4"), InetAddress.getByName("8.8.8.8"))
-      //    .build();
-
-      DnsOverHttps customDns = new DnsOverHttps.Builder().client(bootstrapClient)
-          .url(HttpUrl.get("https://cloudflare-dns.com/dns-query"))
-          .bootstrapDnsHosts(
-              InetAddress.getByName("1.1.1.1"),
-              InetAddress.getByName("1.0.0.1"),
-              InetAddress.getByName("8.8.4.4"),
-              InetAddress.getByName("8.8.8.8")
-          ).build();
-
-      OkHttpClient httpClient = bootstrapClient.newBuilder()
-          //.followRedirects(false)
-          //.followSslRedirects(false)
-          .dns(customDns)
-          .build();
-
-      assert url != null;
-      assert headers != null;
-
-      //headers.put("test-header", "test-value");
-
-      final Request newRequest = new Request.Builder()
-          .url(url.trim())
-          .headers(Headers.of(headers))
-          .build();
-
-      response = httpClient.newCall(newRequest).execute();
-
-      int code = response.code();
-
-      if (needRedirect(code)) {
-
-        // Verifica se tem cookie
-        if (containCookie(headers)) {
-          return null;
-        }
-
-        // Note that the Location key is case-sensitive. Different capitalization styles indicate different redirection modes. For example, the key may indicate that all subsequent requests are redirected to the specified IP address, or that only the current request is redirected to the specified IP address. The capitalization styles and corresponding redirection modes are determined by the server.
-        String location = response.headers().get("Location");
-        if (location == null) {
-          location = response.headers().get("location");
-        }
-
-        assert location != null;
-        if (!(location.startsWith("http://") || location.startsWith("https://"))) {
-          // In some cases, the server returns only the path of the new URL, and you need to complete the URL by replacing the original domain name with the IP address.
-          URL originalUrl = new URL(url);
-          location = originalUrl.getProtocol() + "://" + originalUrl.getHost() + location;
-          return makeRequest(location, headers, url);
-        }
-
-      }
-
-      String contentType = response.header("Content-Type", "text-html");
-
-      System.out.println("httpConnection::url::" + url);
-      System.out.println("httpConnection::ctype::" + contentType);
-
-      /*return new WebResourceResponse(
-          contentType.replace("; charset=utf-8", ""),
-          response.header("content-encoding", "utf-8"),
-          Objects.requireNonNull(response.body()).byteStream()
-      );*/
-
-      /*return new WebResourceResponse(
-          contentType.replace("; charset=utf-8", ""),
-          response.header("content-encoding", "utf-8"),
-          Objects.requireNonNull(response.body()).byteStream()
-      );*/
-
-      return okHttpResponseToWebResourceResponse(response);
-
-    } catch (IOException e) {
-      try {
-        final String errorPage = "ERROR";
-        final InputStream respStream = new ByteArrayInputStream(errorPage.getBytes("UTF-8"));
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-          return new WebResourceResponse("text/html", "UTF-8", 500, "FAIL", null, respStream);
-        } else {
-          return new WebResourceResponse("text/html", "UTF-8", respStream);
-        }
-      } catch (IOException ex) {
-        //Log.e(TAG, "Loading error page from assets failed", ex); // should never happen
-        return null;
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("httpConnection::error::" + e.getMessage());
-      return null;
-    }
-
-  }
-
-  private WebResourceResponse okHttpResponseToWebResourceResponse(Response resp) {
-    InputStream inStream;
-    inStream = resp.body().byteStream();
-    final String contentTypeValue = resp.header("Content-Type");
-    if (contentTypeValue != null) {
-      if (contentTypeValue.indexOf("charset=") > 0) {
-        final String[] contentTypeAndEncoding = contentTypeValue.split("; ");
-        final String contentType = contentTypeAndEncoding[0];
-        final String charset = contentTypeAndEncoding[1].split("=")[1];
-        return new WebResourceResponse(contentType, charset, inStream);
-      } else {
-        return new WebResourceResponse(contentTypeValue, null, inStream);
-      }
-    } else {
-      return new WebResourceResponse("application/octet-stream", null, resp.body().byteStream());
-    }
-  }
-
-  /**
-   * verifica se tem cookie nas headers e deixa passar direto
-   * @param headers
-   */
-  private boolean containCookie(Map<String, String> headers) {
-    for (Map.Entry<String, String> headerField : headers.entrySet()) {
-      if (headerField.getKey().contains("Cookie")) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean needRedirect(int code) {
-    return code >= 300 && code < 400;
-  }
-
-  /*class CustomDns implements Dns {
-    @Override
-    public List<InetAddress> lookup(String hostname) {
-      try {
-        return InetAddress.getAllByName("<YOUR_IP>").toList();
-      } catch (Exception e) {
-        throw UnknownHostException("Failed dns lookup of $hostname");
-      }
-    }
-  }*/
 
   private String getMimeType(String url) {
     final String extension = MimeTypeMap.getFileExtensionFromUrl(url);
