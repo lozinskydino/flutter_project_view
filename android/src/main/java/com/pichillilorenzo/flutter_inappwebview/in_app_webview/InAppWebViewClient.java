@@ -742,6 +742,7 @@ public class InAppWebViewClient extends WebViewClient {
 
     Util.WaitFlutterResult flutterResult;
 
+
     try {
       flutterResult = Util.invokeMethodAndWait(channel, "shouldInterceptRequest", obj);
     } catch (InterruptedException e) {
@@ -761,10 +762,54 @@ public class InAppWebViewClient extends WebViewClient {
       Integer statusCode = (Integer) res.get("statusCode");
       String reasonPhrase = (String) res.get("reasonPhrase");
 
+
+
+      //If reason phrase is sended
+      if(reasonPhrase != null && reasonPhrase.equals("intercept")) {
+        try {
+          if(reasonPhrase != null && reasonPhrase.equals("intercept")) {
+            OkHttpClient httpClient = new OkHttpClient();
+
+            okhttp3.Request request1 = new okhttp3.Request.Builder()
+                    .url(url)
+                    .headers(okhttp3.Headers.of(headers))
+                    .build();
+
+            okhttp3.Response response = httpClient.newCall(request1).execute();
+
+            Map<String, String> okHttpHeaders = new HashMap<String, String>();
+
+            for (Map.Entry<String, List<String>> entry : response.headers().toMultimap().entrySet()) {
+              //if(!entry.getKey().toString().equals("content-type")){
+              okHttpHeaders.put(entry.getKey().toString(), entry.getValue().toString().replace("[", "").replace("]", ""));
+              //}else{
+              //System.out.println("Client via");
+              //}
+
+            }
+            String contentType1 = okHttpHeaders.get("content-type").toString();
+            okHttpHeaders.remove("content-encoding");
+            okHttpHeaders.remove("content-type");
+
+            System.out.println("Okhttp::" + url + " " + headers);
+            //okHttpHeaders.remove("content-type");
+            //return new WebResourceResponse(response.body().contentType().toString(), "UTF-8", response.body().byteStream());
+            //return new WebResourceResponse("", "UTF-8", response.body().byteStream());
+            return new WebResourceResponse("", "UTF-8", response.code(), "Ok", okHttpHeaders, response.body().byteStream());
+          }
+
+        } catch (Exception e) {
+          System.out.println("error::" + e.getMessage());
+          return null;
+        }
+      }
+
+      //If url is from futemax
       Response response = null;
 
       //if (method.equals("GET") && (!url.contains(".php") && !url.contains(".m3u8") && !url.contains(".ts"))) {
       if (method.equals("GET") && url.contains("futemax")) {
+        System.out.println("futemax>>"+toString());
         return makeRequest(url, headers, null);
       }
 
